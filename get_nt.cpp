@@ -267,6 +267,17 @@ void locateFunctions() {
 	addrZwImpersonateThread = pZwImpersonateThread + 0x12;
 }
 
+void GetExecutablePath(std::wstring& exePath) {
+	wchar_t buffer[MAX_PATH];
+	if (GetModuleFileNameW(NULL, buffer, MAX_PATH)) {
+		std::wstring::size_type pos = std::wstring(buffer).find_last_of(L"\\/");
+		exePath = std::wstring(buffer).substr(0, pos) + L"\\get_trusted_installer.exe";
+	}
+	else {
+		exePath = L""; // Handle failure to get path
+	}
+}
+
 int main() {
 	DWORD impPID = getPID(TEXT("winlogon.exe"));
 	HANDLE remoteToken = NULL;
@@ -348,9 +359,12 @@ int main() {
 	}
 	okay("Done.");
 
+	std::wstring exePath;
+	GetExecutablePath(exePath);
+
 	proc("Creating the second process as NT AUHORITY\\SYSTEM...");
 	// HERE WE CREATE A NEW PROCESS (THE SECOND EXECUTABLE)
-	if (!CreateProcessWithTokenW(dupToken, LOGON_WITH_PROFILE, L"C:\\Users\\vasil\\Desktop\\420Tools\\JohnnyUAC\\x64\\Debug\\get_trusted_installer.exe", NULL, 0, NULL, NULL, &si, &pi)) {
+	if (!CreateProcessWithTokenW(dupToken, LOGON_WITH_PROFILE, exePath.c_str(), NULL, 0, NULL, NULL, &si, &pi)) {
 		errormsg("Could not create a process with the token.");
 		errormsg("ERROR: %d", GetLastError());
 		NtClose(curToken);
